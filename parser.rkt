@@ -15,24 +15,24 @@
 
 (define (grammar-list grammars) (map (grammar) grammars))
 
-(define (stateset grammars) (list (list
-    (filter (lambda (grammar) (= (get-symbol grammar) "S"))  
+(define (from-symbol grammars symbol) (
+  (filter (lambda (grammar) (= (get-symbol grammar) symbol))  
         (grammar-list grammars)) 
-)))
+))
+
+(define (stateset grammars) (list (list (from-symbol grammars "S"))))
 
 (define (predict stateset input grammars) (
     (remove-duplicates
         (~a stateset 
-            (map (item (get-pos (first stateset)) (get-dot first stateset))
-                (filter (lambda (grammar) 
-                    (= (get-symbol grammar) 
-                        (map (first (get-right (get-grammar))) stateset))) 
-                    (grammar-list grammars)
+            (map (item (get-pos (first stateset)) (get-dot first stateset)
+                (from-symbol (grammar-list grammars))
+                    (map (first (get-right (get-grammar))) stateset)
                 )
             )
         )
     )
-)
+))
 
 (define (in-grammar? in grammar) (
     (if (= (first grammar) '\'') 
@@ -42,10 +42,22 @@
             #f
         )
     )
-)
+))
+(define (inc-dot item) (item (get-pos i) (add1 (get-dot i)) (get-grammar i))) 
 (define (scan stateset input grammars) (
-    (map (in-grammar? map (first (get-right (get-grammar))) stateset)
+    (let ([is-grammar (filter (lambda (item) 
+            (in-grammar? (list-ref input (get-dot item)
+                (split-at (get-dot item) 
+                    (get-right (get-grammar item)))))) stateset
+    )] (if (empty? is-grammar)
+        #f
+        (map (inc-dot) is-grammar)
+))
      
+(define (complete statesets input grammars) (
+    (let ([completed (last (last statesets))]) (
+))
+    
     
     
      

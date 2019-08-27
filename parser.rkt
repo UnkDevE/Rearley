@@ -1,40 +1,40 @@
 #lang racket
 
-(define (grammar str) (
+(define (grammar str) 
     (let ([lr (string-split str "->")]) (
-        (cons (first lr) (cons (string-split (rest lr) '())))
+        (vector (first lr) (string-split (rest lr))) 
     ))
-)) 
-(define (get-symbol grammar) (car grammar))
-(define (get-right grammar) (cdr grammar)) 
+) 
+(define (get-symbol grammar) (vector-ref 0 grammar))
+(define (get-right grammar) (vector-ref 1 grammar)) 
 
-(define (item pos dot grammar) ('(dot pos grammar)))
-(define (get-dot item) (first item))
-(define (get-pos item) (first (rest item)))
-(define (get-grammar item) (rest (rest item)))
+(define (item pos dot grammar) (vector dot pos grammar)))
+(define (get-dot item) (vector-ref 0 item))
+(define (get-pos item) (vector-ref 1 item))
+(define (get-grammar item) (vector-ref 2 item))
 
 (define (grammar-list grammars) (map (grammar) grammars))
 
-(define (from-symbol grammars symbol) (
+(define (from-symbol grammars symbol) 
   (filter (lambda (grammar) (= (get-symbol grammar) symbol))  
         (grammar-list grammars)) 
-))
+)
 
 (define (stateset grammars) (list (list (from-symbol grammars "S"))))
 
-(define (predict stateset input grammars) (
+(define (predict stateset input grammars) 
     (remove-duplicates
-        (~a stateset 
+        (append 
             (map (item (get-pos (first stateset)) (get-dot first stateset)
                 (from-symbol (grammar-list grammars))
                     (map (first (get-right (get-grammar))) stateset)
                 )
-            )
+            ) stateset
         )
     )
-))
+)
 
-(define (in-grammar? in grammar) (
+(define (is-term? in grammar) 
     (if (= (first grammar) '\'') 
         (= in (drop-right (rest grammar)))
         (if (= (first grammar) '\[') 
@@ -42,23 +42,50 @@
             #f
         )
     )
-))
-(define (inc-dot item) (item (get-pos i) (add1 (get-dot i)) (get-grammar i))) 
-(define (scan stateset input grammars) (
-    (let ([is-grammar (filter (lambda (item) 
-            (in-grammar? (list-ref input (get-dot item)
-                (split-at (get-dot item) 
-                    (get-right (get-grammar item)))))) stateset
-    )] (if (empty? is-grammar)
-        #f
-        (map (inc-dot) is-grammar)
-))
+)
+(define (inc-dot i) (item (get-pos i) (add1 (get-dot i)) (get-grammar i))) 
+(define (scan stateset input grammars) 
+    (let ([items (filter (lambda (item) 
+            (is-term? (list-ref input (get-dot item)
+                (drop (get-right (get-grammar item)
+                    (get-dot item)))))) stateset
+    )] (if (empty? items)
+            #f
+            (map (inc-dot) items)
+        )
+    ))
+)
      
-(define (complete statesets input grammars) (
+(define (pos-to i pos) (item pos (get-dot i) (get-grammar i)))
+(define (complete statesets input grammars) 
     (let ([completed (last (last statesets))]) (
-))
+        (append (map (lambda (item) (pos-to item (length statesets)))
+                    (from-symbol (get-symbol (get-grammar completed)) grammars))
+                (filter (lambda (item) 
+                    (= (list-ref (get-right (get-grammar item)) (get-dot item)) 
+                        (get-symbol (get-grammar completed)))) 
+                    (list-ref statesets (get-pos completed)))
+            (last statesets)
+        )
+    ))
+)
+
+(define (inner-loop statesets input grammars) 
+    (apply (append)
+        (map (lambda (item) 
+                (let ([afterdot (drop (get-right (get-grammar item)) (get-dot item)))]
+                    (cond 
+                        [else (predict (last statesets) input grammars)]
+                        [(null? afterdot) (complete statesets input grammars)]
+                        [(is-term? afterdot) (scan (last statesets) input grammars)]
+                    )
+                )
+            ) (last statesets)
+        ) (drop-right statesets 1)
+    )
+)
     
-    
+ 
     
      
 

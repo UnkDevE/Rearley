@@ -20,7 +20,7 @@
         (grammar-list grammars)) 
 )
 
-(define (stateset grammars) (list (list (from-symbol grammars "S"))))
+(define (statesets-start grammars) (list (list (from-symbol grammars "S"))))
 
 (define (predict stateset input grammars) 
     (remove-duplicates
@@ -59,33 +59,38 @@
 (define (pos-to i pos) (item pos (get-dot i) (get-grammar i)))
 (define (complete statesets input grammars) 
     (let ([completed (last (last statesets))]) (
-        (append (map (lambda (item) (pos-to item (length statesets)))
-                    (from-symbol (get-symbol (get-grammar completed)) grammars))
-                (filter (lambda (item) 
+        (append (filter (lambda (item) 
                     (= (list-ref (get-right (get-grammar item)) (get-dot item)) 
                         (get-symbol (get-grammar completed)))) 
-                    (list-ref statesets (get-pos completed)))
-            (last statesets)
+                            (list-ref statesets (get-pos completed)))
+            (map (lambda (item) (pos-to item (length statesets)))
+                    (from-symbol (get-symbol (get-grammar completed)) grammars))
+           (first statesets)
         )
     ))
 )
 
+(define (update-end ls item) (cons item (drop ls 1)))
 (define (inner-loop statesets input grammars) 
-    (apply (append)
+    (
         (map (lambda (item) 
-                (let ([afterdot (drop (get-right (get-grammar item)) (get-dot item)))]
+                (let ([afterdot (drop (get-right (get-grammar item)) (get-dot item))])
                     (cond 
-                        [else (predict (last statesets) input grammars)]
-                        [(null? afterdot) (complete statesets input grammars)]
-                        [(is-term? afterdot) (scan (last statesets) input grammars)]
+                        [else (innner-loop 
+                            (update-end statesets (predict (first statesets) input grammars)) 
+                            input grammars)]
+                        [(null? afterdot) (cons (complete statesets input grammars) statesets)]
+                        [(is-term? afterdot) (inner-loop 
+                            (update-end statesets (scan (first statesets) input grammars))
+                            input grammars)]
                     )
                 )
-            ) (last statesets)
-        ) (drop-right statesets 1)
+            ) (first statesets)
+        ) 
     )
 )
     
- 
-    
+(define (parse input grammars) 
+    (stateset 
      
 

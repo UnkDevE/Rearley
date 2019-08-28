@@ -71,16 +71,16 @@
 )
 
 (define (update-end ls item) (cons item (drop ls 1)))
-(define (inner-loop statesets input grammars) 
+(define (inner statesets input grammars) 
     (
         (map (lambda (item) 
                 (let ([afterdot (drop (get-right (get-grammar item)) (get-dot item))])
                     (cond 
-                        [else (innner-loop 
+                        [else (inner
                             (update-end statesets (predict (first statesets) input grammars)) 
                             input grammars)]
                         [(null? afterdot) (cons (complete statesets input grammars) statesets)]
-                        [(is-term? afterdot) (inner-loop 
+                        [(is-term? afterdot) (inner
                             (update-end statesets (scan (first statesets) input grammars))
                             input grammars)]
                     )
@@ -89,8 +89,15 @@
         ) 
     )
 )
-    
-(define (parse input grammars) 
-    (stateset 
+(define (outer statesets input grammars) 
+    (let ([nstatesets (inner statesets input grammars)])
+        (cond 
+            [else (outer nstatesets input grammars)]
+            [(= (string-length input) (get-dot (first (first nstatesets)))) nstatesets]
+        )
+    )
+)
      
-
+(define (parse input grammars)
+    ((outer (statesets-start grammars) input grammars)
+)
